@@ -1,0 +1,8 @@
+zowe files list ds "ZA0024.*"
+zowe profiles set zosmf learncobol
+zowe profiles create zosmf learncobol --host 192.86.32.250 --port 10443 --ru false --user ZA0024 --pass ZAG01SAW --ow
+zowe plugins install @zowe/secure-credential-store-for-zowe-cli@zowe-v1-lts
+ npm install -g @zowe/cli@zowe-v1-lts    
+zowe scs update  
+Get-ExecutionPolicy -List
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser         

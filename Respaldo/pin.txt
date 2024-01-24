@@ -1,0 +1,47 @@
+como cambiar pin
+https://www.bing.com/search?q=como+cambiar+pin+en+windows+10&form=WSHBSH&qs=UT&cvid=cb34166370564230be0af79c21319628&pq=&cc=ES&setlang=es-ES&nclid=5BA48D634C5CDB2ABDF6F0A5D5F737CF&ts=1701953866525&wsso=Moderate
+PIN:manuel1234
+CUENTA:ema@twtspain.com
+PASSWORD: Daz72626
+
+correo de formacion extra: formacioncobol@twtspain.com
+
+correo para consultar aparte: marialuisa.leonor@twtspain.com
+
+s9(7)v99 7+2=9/2=4+1=5
++87634 se mostrará como 86 47 3C tiene 5 digitos 5/2=2+1=3
+
+slack-password: ZAG01SAW
+
+
+https//192.86.32.250:10443
+
+IBM i user name:EMAH
+IBM i user name:TORRESTM
+IBM i user name:ALEJANDRO
+Your libraries will be named TORRESTM1, TORRESTM2 and TORRESTMB.
+Your libraries will be named EMAH1, EMAH2 and EMAHB.
+Your libraries will be named ALEJANDRO1, ALEJANDRO2 and ALEJANDROB
+
+PUB400 USER ALEJANDRO
+PASSWORD h5128fg33
+
+IBM
+ema@twtspain.com
+Python243$tm
+
+https://github.com/acanogal/curso-cobol.git
+
+prof correo: martin@imaginagroup.com
+
+enterprise cobol 4.0
+Ejemplos de cobol
+
+npm install -g @zowe/cli@zowe-v1-lts
+zowe plugins install @zowe/secure-credential-store-for-zowe-cli@zowe-v1-lts
+
+zowe profiles create zosmf learncobol --host 192.86.32.250 --port 10443 --ru false --user ZA9999 --pass prompt --ow
+
+https://docs.google.com/forms/d/e/1FAIpQLSd0Gguy3LvldbV2J5eou7gD3opFCmtcXCMYWC94vS0DeEok7A/viewscore?vc=0&c=0&w=1&flr=0&viewscore=AE0zAgAEwVoAzfJEVNVtRAcBKtfik69UwyYLLAeNHn-6baeD83-VpfP4MSQtHmU2XA
+
+https://docs.google.com/forms/d/e/1FAIpQLSd0Gguy3LvldbV2J5eou7gD3opFCmtcXCMYWC94vS0DeEok7A/viewanalytics

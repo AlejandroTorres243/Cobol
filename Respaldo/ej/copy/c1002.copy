@@ -1,0 +1,6 @@
+       01  C1002-GR.
+           05 C1002-ENTRADA.
+              10 INPUT1            PIC 9(02) VALUE 10.
+              10 INPUT2            PIC 9(02) VALUE 2.
+           05 C1002-SALIDA.
+              10 OUT-PUT           PIC 9(03) VALUE ZEROES.

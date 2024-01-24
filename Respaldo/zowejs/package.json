@@ -1,0 +1,20 @@
+{
+  "name": "curso-cobol",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "submitHost": "node ./zowejs/submitHost",
+    "submitHostVO": "node ./zowejs/submitHostVO",
+    "submitLocal": "node ./zowejs/submitLocal",
+    "compile": "node ./zowejs/compile",
+    "upload":  "node ./zowejs/upload",
+    "compileSubmit": "node ./zowejs/compileSubmit"
+  },
+  "keywords": [],
+  "author": "Antonio Cano Galindo",
+  "license": "Creative Commons Attribution 4.0 International",
+  "dependencies": {
+    "@zowe/cli": "^6.40.24"
+  }
+}

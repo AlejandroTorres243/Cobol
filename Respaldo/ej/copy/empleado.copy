@@ -1,0 +1,13 @@
+       01  :TAG:-EMPLEADO.
+           10 :TAG:-CODIGO PIC 9(03).
+           10 :TAG:-NOMBRE-COMPLETO.
+              15 :TAG:-NOMBRE PIC X(10).
+              15 :TAG:-APELLIDO1 PIC X(15).
+              15 :TAG:-APELLIDO2 PIC X(15).
+           10 :TAG:-FECHA-INGRESO.
+                15 :TAG:-DIA PIC 9(02).
+                15 FILLER    PIC X(01) VALUE "/".
+                15 :TAG:-MES PIC 9(02).
+                15 FILLER    PIC X(01) VALUE "/".
+                15 :TAG:-ANIO PIC 9(04).
+           10 :TAG:-SALARIO PIC 9(5)V99.

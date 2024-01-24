@@ -1,0 +1,13 @@
+       01  EMP-EMPLEADO.
+           10 EMP-CODIGO PIC 9(03).
+           10 EMP-NOMBRE-COMPLETO.
+              15 EMP-NOMBRE PIC X(10).
+              15 EMP-APELLIDO1 PIC X(15).
+              15 EMP-APELLIDO1 PIC X(15).
+           10 EMP-FECHA-INGRESO.
+                15 EMP-DIA PIC 9(02).
+                15 FILLER    PIC X(01) VALUE "/".
+                15 EMP-MES PIC 9(02).
+                15 FILLER    PIC X(01) VALUE "/".
+                15 EMP-ANIO PIC 9(04).
+           10 EMP-SALARIO PIC 9(5)V99.

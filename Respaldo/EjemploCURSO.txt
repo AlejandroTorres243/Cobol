@@ -1,0 +1,1469 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. ELHM011P.
+      *----------------------------------------------------------------*
+      *                                                                *
+      *  TITULO    : Fichero.CSV.RESULTADOS ELECTORALES.               *
+      *  COMPILAR  : COBOL-BATH-DB2 (P5)                               *
+      *  CREACCION : 19-07-2006 / equipo D500 / DG20867                *
+      *                                                                *
+      *----------------------------------------------------------------*
+      *                                                                *
+      *  OBJETIVO  : Obtención de un fichero CSV con los RESULTADOS E- *
+      *              LECTORALES de una elección concreta a distintos   *
+      *              niveles de detalle (variable):                    *
+      *              - Total Bizkaia.                                  *
+      *              - Por Circunscripciones.                          *
+      *              - Por Municipios.                                 *
+      *              - Por Mesas Electorales.                          *
+      *----------------------------------------------------------------*
+
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SPECIAL-NAMES.
+           C01 IS SALTO
+           DECIMAL-POINT IS COMMA.
+
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+
+           SELECT ELHM0110 ASSIGN ELHM0110.
+
+      *-------------*
+       DATA DIVISION.
+      *-------------*
+       FILE SECTION.
+
+       FD  ELHM0110
+           RECORDING MODE IS V
+           BLOCK CONTAINS 0 RECORDS
+           LABEL RECORD IS STANDARD.
+       01  REG-PC-CAB       PIC X(2002).
+       01  REG-PC-CAB-2     PIC X(70).
+       01  REG-PC-CAB-N1    PIC X(8).
+       01  REG-PC-CAB-N2    PIC X(75).
+       01  REG-PC-CAB-N3    PIC X(96).
+       01  REG-PC-CAB-N4    PIC X(91).
+       01  REG-PC-DET       PIC X(2002).
+      *-----------------------*
+       WORKING-STORAGE SECTION.
+      *-----------------------*
+
+      *----------------------------------------------------------------*
+      *   Variables del programa.                                      *
+      *----------------------------------------------------------------*
+
+       01  WC-FINABEND             PIC X(8)     VALUE 'FINABEND'.
+       01  WP-CODIGO-ABEND         PIC 9(5)     COMP VALUE ZEROS.
+      *
+       01  IND                     PIC 9(03)    VALUE ZEROS.
+       01  IND-PV                  PIC 9(03)    VALUE ZEROS.
+      *
+       01  WC-TIPO-ELECCION        PIC X        VALUE SPACES.
+       01  WC-CODELE               PIC XXX      VALUE SPACES.
+      *
+       01  WC-TIPO-ENTIDAD         PIC X        VALUE SPACES.
+      *
+       01  WC-ANO-ELEC             PIC X(04)    VALUE SPACES.
+       01  WC-ANO                  PIC X(02).
+       01  WN-ANO REDEFINES WC-ANO PIC 9(02).
+      *
+       01  WC-TITULO               PIC X(68)    VALUE SPACES.
+       01  WC-TITULO-2             PIC X(68)    VALUE SPACES.
+      *
+       01  WC-NOT-2                PIC X(73)    VALUE SPACES.
+       01  WC-NOT-3                PIC X(94)    VALUE SPACES.
+       01  WC-NOT-4                PIC X(89)    VALUE SPACES.
+      *
+       01  WN-CODPART              PIC S999V    USAGE COMP-3.
+      *
+       01  WC-AMBITO               PIC X(45)    VALUE SPACES.
+       01  WC-AMBITO-MESA          PIC X(66)    VALUE SPACES.
+       01  WC-SIGLAS               PIC X(15)    VALUE SPACES.
+       01  WC-NOMBRE               PIC X(45)    VALUE SPACES.
+      *
+       01  WN-CODCIR               PIC S9V   USAGE COMP-3  VALUE ZEROS.
+       01  WN-CODMUN               PIC S999V USAGE COMP-3 VALUE ZEROS.
+       01  WN-CODDIS               PIC 99       VALUE ZEROS.
+       01  WN-CODSEC               PIC 999      VALUE ZEROS.
+       01  WN-CODMES               PIC 9        VALUE ZEROS.
+       01  WE-CODDIS               PIC Z9       VALUE ZEROS.
+       01  WE-CODSEC               PIC ZZ9      VALUE ZEROS.
+       01  WE-CODMES               PIC 9        VALUE ZEROS.
+       01  WN-WK-CODPAR             PIC 9(3)    VALUE ZEROS.
+      *
+       01  WC-CODDIS               PIC XX       VALUE SPACES.
+       01  WC-CODSEC               PIC XXX      VALUE SPACES.
+       01  WC-CODMES               PIC X        VALUE SPACES.
+      *
+       01  WC-SW-VOTOS             PIC X        VALUE 'N'.
+       01  WC-SW-PORCEN            PIC X        VALUE 'N'.
+       01  WC-SW-ELECTOS           PIC X        VALUE 'N'.
+       01  WC-SW-ENCONTRADO        PIC X        VALUE 'N'.
+      *
+       01  WN-EMITIDOS             PIC 9(7)     VALUE ZEROS.
+       01  WN-CENSO-ES             PIC 9(7)     VALUE ZEROS.
+       01  WN-CENSO-EL             PIC 9(7)     VALUE ZEROS.
+       01  WN-ABSTENCION           PIC 9(7)     VALUE ZEROS.
+       01  WN-VALIDOS              PIC 9(7)     VALUE ZEROS.
+       01  WN-NULOS                PIC 9(7)     VALUE ZEROS.
+       01  WN-BLANCOS              PIC 9(7)     VALUE ZEROS.
+       01  WN-CODMUNI              PIC 9(3).
+       01  WC-DESMUNI              PIC X(25).
+      *
+       77  W-CIEN                  PIC 9(3)V9(2) VALUE 100,00.
+       77  WN-PORC                 PIC 9(3)V9(2).
+       77  WN-PORCEN               PIC 9(3)V9(2).
+       77  WN-PORNULOS             PIC 9(3)V9(2).
+      *----------------------------------------------------------------*
+      *
+       01  WN-POR-ESCRUTA          PIC 9(3)V99  VALUE ZEROS.
+       01  WN-POR-ABSTENCION       PIC 9(3)V99  VALUE ZEROS.
+       01  WN-POR-BLANCO           PIC 9(3)V99  VALUE ZEROS.
+       01  WN-POR-NULOS            PIC 9(3)V99  VALUE ZEROS.
+       01  WN-POR-EMITIDO          PIC 9(3)V99  VALUE ZEROS.
+       01  WN-POR-VALIDO           PIC 9(3)V99  VALUE ZEROS.
+      *
+      *----------------------------------------------------------------*
+      *   Variables  Editables                                         *
+      *----------------------------------------------------------------*
+      *----------------------------------------------------------------*
+       01  WE-VOTOS                PIC ZZZ.ZZ9.
+       01  WE-POR-VALIDO           PIC ZZ9,99.
+       01  WE-CONCEJALES           PIC Z.ZZ9.
+      *
+       01  WE-CENSO-EL             PIC ZZZ.ZZ9.
+       01  WE-EMITIDOS             PIC ZZZ.ZZ9.
+       01  WE-VALIDOS              PIC ZZZ.ZZ9.
+       01  WE-ABSTENCION           PIC ZZZ.ZZ9.
+       01  WE-BLANCOS              PIC ZZZ.ZZ9.
+       01  WE-POR-ESCRUTA          PIC ZZ9,99.
+       01  WE-POR-ABSTENCION       PIC ZZ9,99.
+       01  WE-POR-BLANCO           PIC ZZ9,99.
+       01  WE-POR-NULOS            PIC ZZ9,99.
+       01  WE-NULOS                PIC ZZZ.ZZ9.
+       01  WE-POR-EMITIDO          PIC ZZ9,99.
+      *
+      *----------------------------------------------------------------*
+      *   Tabla working de el resgistro E2PAVOES                       *
+      *----------------------------------------------------------------*
+       01 PART-VOTOS-ESCANOS       PIC X(119).
+       01 PART-VOTOS-ESCANOS-R REDEFINES PART-VOTOS-ESCANOS.
+          02 VOTOS-ESCA-PART OCCURS 99 TIMES.
+             03 WN-CODPAR          PIC 9(3).
+             03 WN-VOTOS           PIC 9(6).
+             03 WN-ESCAN           PIC 9(3).
+             03 WN-PORVOT-V        PIC 9(3)V99.
+      *
+       01 RES-PAVOES               PIC X(2673).
+       01 RES-PAVOES-R REDEFINES RES-PAVOES.
+          02 RES-PART-VOTOS-ESCANOS OCCURS 99 TIMES.
+             03 RES-CODPAR         PIC 9(3).
+             03 RES-VOTOS          PIC 9(6).
+             03 RES-ESCAN          PIC 9(3).
+             03 RES-PORVOT-E       PIC 9(3)V99.
+             03 RES-PORVOT-V       PIC 9(3)V99.
+             03 RES-PORVOT-C       PIC 9(3)V99.
+      *
+       01 CABECERA-PART            PIC X(1782).
+       01 CABECERA-PART-R  REDEFINES CABECERA-PART.
+          02 CABECERA-PAR OCCURS 99 TIMES.
+             03 WN-CODPART-CA      PIC 9(3).
+             03 WC-SIGL-CA         PIC X(15).
+
+      *----------------------------------------------------------------*
+      *   Campos de control de fin fichero.                            *
+      *----------------------------------------------------------------*
+
+       01  WC-FIN-CURSOR           PIC X(1)     VALUE 'N'.
+           88 FIN-CURSOR                        VALUE 'S'.
+
+       01  WC-FIN-CURPERS          PIC X(1)     VALUE 'N'.
+           88 FIN-CURPERS                       VALUE 'S'.
+
+       01  WC-SW-FICHERO           PIC X        VALUE 'N'.
+           88  SI-HAY-FICHERO                   VALUE 'S'.
+           88  NO-HAY-FICHERO                   VALUE 'N'.
+      *
+      *----------------------------------------------------------------*
+      *  Campos de Switch parar el tratamiento de Total Bizkaia
+      *----------------------------------------------------------------*
+       01  WC-SW-TOT-BIZKAIA       PIC X        VALUE 'N'.
+           88  SI-TOT-BIZKAIA                   VALUE 'S'.
+           88  NO-TOT-BIZKAIA                   VALUE 'N'.
+      *----------------------------------------------------------------*
+      *  Rutina obtener fecha del sistema                              *
+      *----------------------------------------------------------------*
+       COPY SR02006R.
+      *----------------------------------------------------------------*
+      *  Rutina general de fecha.                                      *
+      *----------------------------------------------------------------*
+       01  WC-SR02004R             PIC X(8)     VALUE 'SR02004R'.
+           COPY SR02004R.
+      *----------------------------------------------------------------*
+      *  CABECERAS Y DETALLE DE FICHERO CSV                            *
+      *----------------------------------------------------------------*
+      *
+       01  WC-CABECERA-SALIDA-1.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L101-TITULO         PIC X(68)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+      *
+       01  WC-CABECERA-SALIDA-2.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L102-TITULO-2       PIC X(68)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+      *
+       01  WC-CABECERA-SALIDA-3.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+      *
+       01  WC-CABECERA-SALIDA-4.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(15) VALUE 'Eremua / Ambito'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(15) VALUE 'Errolda / Censo'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(21) VALUE 'Hautesleak / Votantes'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(24) VALUE 'Abstentzioa / Abstención'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(20) VALUE 'Baliodunak / Válidos'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(19) VALUE 'Baliogabeak / Nulos'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(16) VALUE 'Zuriak / Blancos'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 WC-CABECERA-PARTIDOS  OCCURS 99 TIMES.
+              03 FILLER              PIC X(01)     VALUE '"'.
+              03 WC-L104-SIGLAS      PIC X(15)     VALUE SPACES.
+              03 FILLER              PIC X(01)     VALUE '"'.
+              03 FILLER              PIC X(01)     VALUE ';'.
+      *
+       01  WC-DETALLE-SALIDA-1.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L105-AMBITO         PIC X(66)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(14) VALUE 'Botuak / Votos'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L105-CENSO          PIC X(07)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L105-VOTANTES       PIC X(07)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L105-ABSTENCION     PIC X(07)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L105-VALIDOS        PIC X(07)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L105-NULOS          PIC X(07)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L105-BLANCOS        PIC X(07)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 WC-L105-VOTOS-PARTIDOS  OCCURS 99 TIMES.
+              03 FILLER              PIC X(01)     VALUE '"'.
+              03 WC-L105-VOTOS       PIC X(7)      VALUE SPACES.
+              03 FILLER              PIC X(01)     VALUE '"'.
+              03 FILLER              PIC X(01)     VALUE ';'.
+      *
+       01  WC-DETALLE-SALIDA-2.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L106-AMBITO         PIC X(66)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER PIC X(26) VALUE 'Portzentaiak / Porcentajes'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L106-POR-CENSO      PIC X(06)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L106-POR-VOTANTES   PIC X(06)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L106-POR-ABSTEN     PIC X(06)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L106-POR-VALIDOS    PIC X(06)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L106-POR-NULOS      PIC X(06)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L106-POR-BLANCOS    PIC X(06)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 WC-L106-VOTOS-PARTIDOS  OCCURS 99 TIMES.
+              03 FILLER              PIC X(01)     VALUE '"'.
+              03 WC-L106-POR-PART    PIC X(6)      VALUE SPACES.
+              03 FILLER              PIC X(01)     VALUE '"'.
+              03 FILLER              PIC X(01)     VALUE ';'.
+      *
+       01  WC-DETALLE-SALIDA-3.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L107-AMBITO         PIC X(66)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L107-ESCANOS        PIC X(25)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(01)     VALUE ';'.
+           02 WC-L107-VOTOS-PARTIDOS  OCCURS 99 TIMES.
+              05 FILLER              PIC X(01)     VALUE '"'.
+              05 WC-L107-POR-PART    PIC X(6)      VALUE SPACES.
+              05 FILLER              PIC X(01)     VALUE '"'.
+              05 FILLER              PIC X(01)     VALUE ';'.
+       01  WC-NOTAS-1.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 FILLER                 PIC X(06)     VALUE 'Notas:'.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+       01  WC-NOTAS-2.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L101-NOTAS-2        PIC X(73)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+       01  WC-NOTAS-3.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L101-NOTAS-3        PIC X(94)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+       01  WC-NOTAS-4.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+           02 WC-L101-NOTAS-4        PIC X(89)     VALUE SPACES.
+           02 FILLER                 PIC X(01)     VALUE '"'.
+
+      *----------------------------------------------------------------*
+      *   Campos de recepción de fichas parámetro.                     *
+      *----------------------------------------------------------------*
+       01  WC-F1.
+           02 WC-F1-ELEC1            PIC XXX.
+           02 WC-F1-VOTOS            PIC X.
+           02 WC-F1-PORCEN           PIC X.
+           02 WC-F1-ELECTOS          PIC X.
+
+       01  WC-F2.
+           02 WC-F2-LIST-BIZ         PIC X.
+           02 WC-F2-LIST-CIRC        PIC X.
+           02 WC-F2-LIST-MUNI        PIC X.
+           02 WC-F2-LIST-MESA        PIC X.
+           02 WC-F2-LIST-PART        PIC X.
+           02 WC-F2-LIST-ELEC        PIC X.
+
+       01  WC-F3.
+           02 WC-F3-TIPO-ENTIDAD     PIC X.
+
+      *----------------------------------------------------------------*
+      *   Tablas DB2 tratadas en el programa (INCLUDE).                *
+      *----------------------------------------------------------------*
+      *                                                                *
+      *   WC-DB2-ERROR - Para errores de db2.                          *
+      *   SQLCA        - Para comunicaciones del db2.                  *
+      *   TBELRESU     - TABAL SYELRESU (Resultados)                   *
+      *   TBELPERS     - TABLA SYELPERS (Personas (Apoderados/conceja.)*
+      *   TBUTMUNI     - TABLA SYUTMUNI (Municipios )                  *
+      *----------------------------------------------------------------*
+
+       01  WC-DB2-ERROR.
+           03  WE-DB2-CODE           PIC -999.
+           03  FILLER                PIC X(1)  VALUE SPACES.
+           03  WC-DB2-MSG            PIC X(30) VALUE SPACES.
+           03  FILLER                PIC X(1)  VALUE SPACES.
+           03  WC-DB2-ERR            PIC X(67) VALUE SPACES.
+
+           EXEC SQL INCLUDE SQLCA    END-EXEC.
+           EXEC SQL INCLUDE TBELRESU END-EXEC.
+           EXEC SQL INCLUDE TBELPERS END-EXEC.
+           EXEC SQL INCLUDE TBUTMUNI END-EXEC.
+           EXEC SQL INCLUDE TBELPART END-EXEC.
+
+      *----------------------------------------------------------------*
+      *   Definicion de cursores DB2.                                  *
+      *----------------------------------------------------------------*
+      *                                                                *
+      *   CURC1      - Cursor para nivel Bizkaia                       *
+      *   CURC2      - Cursor para nivel Circunscripciones             *
+      *   CURC3      - Cursor para nivel Municipios                    *
+      *   CURC4      - Cursor para nivel Mesas                         *
+      *                                                                *
+      *----------------------------------------------------------------*
+
+           EXEC SQL DECLARE CURC1 CURSOR FOR
+              SELECT *
+                FROM SYELRESU
+               WHERE E2CODELE = :WC-CODELE
+                 AND E2CODCIR = :WN-CODCIR
+           END-EXEC.
+
+           EXEC SQL DECLARE CURC2   CURSOR FOR
+              SELECT *
+                FROM SYELRESU, SYELPERS
+               WHERE E2CODELE = :WC-CODELE
+                 AND E2CODELE = E3CODELE
+                 AND E2CODCIR < :WN-CODCIR
+                 AND E2CODCIR = E3CODCIR
+                 AND E2CODMUN = :WN-CODMUN
+                 AND E3CODMUN = 0
+              ORDER BY E3NOMBRE
+           END-EXEC.
+
+           EXEC SQL DECLARE CURC3   CURSOR FOR
+              SELECT *
+                FROM SYELRESU, SYUTMUNI
+               WHERE E2CODELE = :WC-CODELE
+                 AND E2CODMUN < :WN-CODMUN
+                 AND E2CODDIS = 99
+                 AND E2CODMUN = MUCLAMUN
+                 AND MUCLAPRO = 48
+               ORDER BY MUDESCAM
+           END-EXEC.
+
+           EXEC SQL DECLARE CURC4   CURSOR FOR
+              SELECT *
+                FROM SYELRESU, SYUTMUNI
+               WHERE E2CODELE = :WC-CODELE
+                 AND E2CODMUN < 999
+                 AND E2CODDIS < 99
+                 AND E2CODMUN = MUCLAMUN
+                 AND MUCLAPRO = 48
+               ORDER BY MUDESCAM, E2CODDIS, E2CODSEC, E2CODMES
+           END-EXEC.
+
+
+      ******************************************************************
+      *                                                                *
+      *    P R O C E D U R E   D I V I S I O N                         *
+      *                                                                *
+      ******************************************************************
+      *------------------*
+       PROCEDURE DIVISION.
+HPTRAN     PERFORM MOVE-ZERO-TO-PIC9 THRU MOVE-ZERO-TO-PIC9-END.
+      *------------------*
+
+           PERFORM P-PROGRAMA.
+           PERFORM TRATAMIENTO UNTIL WC-FIN-CURSOR = 'S'
+           PERFORM F-PROGRAMA.
+
+      ******************************************************************
+      *                                                                *
+      *    P R O C E D I M I E N T O S                                 *
+      *                                                                *
+      ******************************************************************
+      *----------*
+       P-PROGRAMA.
+      *----------*
+      *
+      * - Controlar errores DB2.
+      *
+           EXEC SQL WHENEVER SQLWARNING CONTINUE END-EXEC.
+           EXEC SQL WHENEVER SQLERROR GO TO ERROR-SQL END-EXEC.
+      *
+      * - Aceptar ficha parámetro y componer las variables de selección.
+      *
+           ACCEPT WC-F1
+           ACCEPT WC-F2
+           ACCEPT WC-F3
+      * - Abrir ficheros.
+           PERFORM MOVER-FICHAS-PARAMETRO
+           MOVE 'S'                       TO WC-SW-FICHERO
+           PERFORM VALIDAR-TIPO-ENTIDAD
+           IF WC-SW-FICHERO = 'S'
+              OPEN OUTPUT ELHM0110
+           ELSE
+              MOVE 3003 TO RETURN-CODE
+              STOP RUN
+           END-IF
+      * - Una vez validados los datos de las fichas parámetro, podemos
+      *   recopilar los datos que vamos a transmitir en el fichero.
+           PERFORM CALCULAR-ANO-ELECCION
+           PERFORM MOVER-CAB-TITULO
+      * - Escribimos la cabecera que consta de 3 filas
+           WRITE REG-PC-CAB-2              FROM WC-CABECERA-SALIDA-1
+           PERFORM MOVER-CAB-TITULO-2
+           WRITE REG-PC-CAB-2              FROM WC-CABECERA-SALIDA-2
+           WRITE REG-PC-CAB-2              FROM WC-CABECERA-SALIDA-3
+      * - Calculamos el resgistro de Bizkaia.
+           PERFORM LEER-RESULTADO-BIZKAIA
+           PERFORM INICIAR-CAB-PARTI-BIZ
+           PERFORM CABECERA-PARTIDOS-BIZKAIA
+      * - Escribimos la cabecera de Bizkaia.
+           PERFORM MOVER-TITULO-CABECERA
+           WRITE REG-PC-CAB                FROM WC-CABECERA-SALIDA-4
+      * - Dependiendo del tipo de entidad, moveremos los valores corres-
+      *   pondientes el cursor que vamos a utilizar.
+           EVALUATE WC-TIPO-ENTIDAD
+              WHEN '1'
+                   MOVE 9                  TO WN-CODCIR
+                   PERFORM OPEN-CURC1
+                   PERFORM FETCH-CURC1
+              WHEN '2'
+                   MOVE 8                  TO WN-CODCIR
+                   MOVE 999                TO WN-CODMUN
+                   PERFORM OPEN-CURC2
+                   PERFORM FETCH-CURC2
+              WHEN '3'
+                   MOVE 999                TO WN-CODMUN
+                   PERFORM OPEN-CURC3
+                   PERFORM FETCH-CURC3
+              WHEN '4'
+                   PERFORM OPEN-CURC4
+                   PERFORM FETCH-CURC4
+           END-EVALUATE.
+      *
+      *-----------*
+       TRATAMIENTO.
+      *-----------*
+      *
+           PERFORM  INICIALIZAR-TABLA-PAVOES
+           MOVE E2PAVOES-TEXT(1:E2PAVOES-LEN) TO RES-PAVOES
+
+           IF WC-SW-VOTOS = 'S'
+              PERFORM P-VOTOS
+              PERFORM T-VOTOS
+              PERFORM F-VOTOS
+           END-IF
+           IF WC-SW-PORCEN = 'S'
+              PERFORM P-PORCEN
+              PERFORM T-PORCEN
+              PERFORM F-PORCEN
+           END-IF
+           IF WC-SW-ELECTOS = 'S'
+              PERFORM T-ELECTOS
+              PERFORM F-ELECTOS
+           END-IF
+      * - Leemos del cursor abierto.
+           PERFORM LEER-SIGUIENTE.
+
+      *----------*
+       F-PROGRAMA.
+      *----------*
+      * - Cerrar cursor.
+      *
+           EVALUATE WC-TIPO-ENTIDAD
+              WHEN '1'
+                   PERFORM CLOSE-CURC1
+              WHEN '2'
+                   PERFORM CLOSE-CURC2
+              WHEN '3'
+                   PERFORM CLOSE-CURC3
+              WHEN '4'
+                   PERFORM CLOSE-CURC4
+           END-EVALUATE
+      *
+      * - Cerrar fichero.
+      *
+           IF WC-SW-PORCEN = 'S'
+              PERFORM CREAR-ESCRIBIR-PIE-NOTAS
+           END-IF
+           CLOSE ELHM0110
+      * - Fin.
+           STOP RUN.
+
+      ******************************************************************
+      * S E G U N D O    N I V E L   D E    T R A T A M I E N T O      *
+      ******************************************************************
+      *--------*
+       P-VOTOS.
+      *--------*
+           INITIALIZE  WN-EMITIDOS WN-CENSO-EL WN-VALIDOS
+                       WN-ABSTENCION WN-NULOS
+                       WN-CENSO-ES WN-BLANCOS
+
+           PERFORM RESULT-ELECTORALES-GENERALES.
+
+      *--------*
+       T-VOTOS.
+      *--------*
+      *
+           INITIALIZE  IND-PV   IND
+           PERFORM VARYING IND-PV FROM 1 BY 1 UNTIL IND-PV > 99 OR
+                                    RES-CODPAR (IND-PV) = ZEROS OR
+                                    RES-CODPAR (IND-PV) = SPACES
+                 INITIALIZE  WC-SW-ENCONTRADO
+                 PERFORM VARYING IND FROM 1 BY 1 UNTIL IND > 99 OR
+                                          WC-SW-ENCONTRADO = 'S'
+                   IF RES-CODPAR (IND-PV)  =  WN-CODPART-CA (IND)
+                      MOVE RES-CODPAR (IND-PV)  TO WN-CODPAR(IND)
+                      MOVE RES-VOTOS (IND-PV)   TO WN-VOTOS(IND)
+                      MOVE 'S'  TO WC-SW-ENCONTRADO
+                   END-IF
+                 END-PERFORM
+           END-PERFORM.
+
+      *--------*
+       F-VOTOS.
+      *--------*
+           INITIALIZE WC-DETALLE-SALIDA-1
+           EVALUATE WC-TIPO-ENTIDAD
+             WHEN '1'
+                  MOVE 'BIZKAIA'                TO WC-AMBITO
+                  STRING WC-AMBITO DELIMITED BY SIZE INTO WC-L105-AMBITO
+             WHEN '2'  WHEN '3'
+                  MOVE   WC-AMBITO              TO WC-L105-AMBITO
+             WHEN '4'
+                  MOVE   WC-AMBITO-MESA         TO WC-L105-AMBITO
+           END-EVALUATE
+      *
+           MOVE  WE-CENSO-EL                    TO WC-L105-CENSO
+           MOVE  WE-EMITIDOS                    TO WC-L105-VOTANTES
+           MOVE  WE-ABSTENCION                  TO WC-L105-ABSTENCION
+           MOVE  WE-VALIDOS                     TO WC-L105-VALIDOS
+           MOVE  WE-NULOS                       TO WC-L105-NULOS
+           MOVE  WE-BLANCOS                     TO WC-L105-BLANCOS
+           PERFORM ESCRIBIR-VOTOS
+      *
+           WRITE  REG-PC-DET          FROM WC-DETALLE-SALIDA-1
+           PERFORM INICIALIZA-VOTOS.
+      *
+      ******************************************************************
+      *    T E R C E R   N I V E L   D E    T R A T A M I E N T O      *
+      ******************************************************************
+      *--------*
+       P-PORCEN.
+      *--------*
+           INITIALIZE  WN-POR-ESCRUTA       WN-POR-ABSTENCION
+                                            WN-POR-ESCRUTA
+                       WN-POR-EMITIDO
+                       WN-POR-VALIDO
+                       WN-POR-NULOS
+                       WN-POR-BLANCO
+           PERFORM RESULT-ELECTORALES-GENERALES
+           PERFORM CALCULAR-PORCENTAJES.
+
+      *
+      *--------*
+       T-PORCEN.
+      *--------*
+           INITIALIZE  IND-PV   IND
+           PERFORM VARYING IND-PV FROM 1 BY 1 UNTIL IND-PV > 99 OR
+                                    RES-CODPAR (IND-PV) = ZEROS OR
+                                    RES-CODPAR (IND-PV) = SPACES
+              INITIALIZE  WC-SW-ENCONTRADO
+              PERFORM VARYING IND FROM 1 BY 1 UNTIL IND > 99 OR
+                                             WC-SW-ENCONTRADO = 'S'
+                  IF RES-CODPAR (IND-PV)  =  WN-CODPART-CA (IND)
+                     MOVE RES-CODPAR (IND-PV)    TO WN-CODPAR(IND)
+                     MOVE RES-PORVOT-V (IND-PV)  TO WN-PORVOT-V(IND)
+                     MOVE 'S'  TO WC-SW-ENCONTRADO
+                  END-IF
+              END-PERFORM
+           END-PERFORM.
+
+      *--------*
+       F-PORCEN.
+      *--------*
+           INITIALIZE WC-DETALLE-SALIDA-2
+           EVALUATE WC-TIPO-ENTIDAD
+             WHEN '1'
+                  STRING 'BIZKAIA' DELIMITED BY SIZE INTO WC-L106-AMBITO
+             WHEN '2' WHEN '3'
+                  STRING WC-AMBITO DELIMITED BY SIZE INTO WC-L106-AMBITO
+             WHEN '4'
+                  STRING WC-AMBITO-MESA   DELIMITED BY SIZE INTO
+                                                          WC-L106-AMBITO
+           END-EVALUATE
+           MOVE   WE-POR-ESCRUTA        TO WC-L106-POR-CENSO
+           MOVE   WE-POR-EMITIDO        TO WC-L106-POR-VOTANTES
+           MOVE   WE-POR-ABSTENCION     TO WC-L106-POR-ABSTEN
+           MOVE   WE-POR-VALIDO         TO WC-L106-POR-VALIDOS
+           MOVE   WE-POR-NULOS          TO WC-L106-POR-NULOS
+           MOVE   WE-POR-BLANCO         TO WC-L106-POR-BLANCOS
+      *
+           PERFORM ESCRIBIR-PORCENTAJES
+           WRITE REG-PC-DET             FROM WC-DETALLE-SALIDA-2
+           PERFORM INICIALIZA-POR-VAL.
+
+      ******************************************************************
+      * C U A R T O      N I V E L   D E    T R A T A M I E N T O      *
+      ******************************************************************
+      *---------*
+       T-ELECTOS.
+      *---------*
+      *
+           INITIALIZE  IND-PV   IND
+           PERFORM VARYING IND-PV FROM 1 BY 1 UNTIL IND-PV > 99 OR
+                                    RES-CODPAR (IND-PV) = ZEROS OR
+                                    RES-CODPAR (IND-PV) = SPACES
+              INITIALIZE  WC-SW-ENCONTRADO
+              PERFORM VARYING IND FROM 1 BY 1 UNTIL IND > 99 OR
+                                             WC-SW-ENCONTRADO = 'S'
+                 IF RES-CODPAR (IND-PV)  =  WN-CODPART-CA (IND)
+                      MOVE RES-CODPAR (IND-PV)  TO WN-CODPAR(IND)
+                      MOVE RES-ESCAN  (IND-PV)  TO WN-ESCAN(IND)
+                      MOVE 'S'  TO WC-SW-ENCONTRADO
+                 END-IF
+              END-PERFORM
+           END-PERFORM.
+      *---------*
+       F-ELECTOS.
+      *---------*
+      *
+           INITIALIZE WC-DETALLE-SALIDA-3
+      *
+           EVALUATE WC-TIPO-ENTIDAD
+             WHEN '1'
+                  IF WC-TIPO-ELECCION = 'G' OR 'V' OR 'F'
+                    STRING 'BIZKAIA' DELIMITED BY SIZE INTO
+                                                         WC-L107-AMBITO
+
+                    STRING 'Jarlekuak / Escaños' DELIMITED BY SIZE INTO
+                                                         WC-L107-ESCANOS
+                  ELSE
+                    IF WC-TIPO-ELECCION = 'M'
+                       STRING 'BIZKAIA' DELIMITED BY SIZE INTO
+                                                         WC-L107-AMBITO
+                       STRING 'Zinegotziak / Concejales'
+                                  DELIMITED BY SIZE INTO WC-L107-ESCANOS
+                    ELSE
+                       MOVE SPACES                    TO WC-L107-ESCANOS
+                    END-IF
+                  END-IF
+             WHEN '2'
+                  STRING WC-AMBITO DELIMITED BY SIZE INTO WC-L107-AMBITO
+                  IF WC-TIPO-ELECCION = 'F'
+                    STRING 'Jarlekuak / Escaños' DELIMITED BY SIZE INTO
+                                                         WC-L107-ESCANOS
+                  ELSE
+                    IF WC-TIPO-ELECCION = 'M'
+                       STRING 'Zinegotziak / Concejales'
+                                  DELIMITED BY SIZE INTO WC-L107-ESCANOS
+                    ELSE
+                       MOVE SPACES                    TO WC-L107-AMBITO
+                       MOVE SPACES                    TO WC-L107-ESCANOS
+                    END-IF
+                  END-IF
+             WHEN '3'
+                  STRING WC-AMBITO DELIMITED BY SIZE INTO WC-L107-AMBITO
+                  IF WC-TIPO-ELECCION = 'M'
+                       STRING 'Zinegotziak / Concejales'
+                                  DELIMITED BY SIZE INTO WC-L107-ESCANOS
+                  ELSE
+                       MOVE SPACES                    TO WC-L107-AMBITO
+                       MOVE SPACES                    TO WC-L107-ESCANOS
+                  END-IF
+           END-EVALUATE
+           PERFORM ESCRIBIR-ELECTOS
+           WRITE REG-PC-DET             FROM WC-DETALLE-SALIDA-3
+           PERFORM INICIALIZA-ESCANOS.
+
+      ******************************************************************
+      *                                                                *
+      *    T R A T A M I E N T O S                                     *
+      *                                                                *
+      ******************************************************************
+      *-----------------------*
+       MOVER-FICHAS-PARAMETRO.
+      *-----------------------*
+           MOVE WC-F1-ELEC1                    TO WC-CODELE
+           MOVE WC-F1-ELEC1(1:1)               TO WC-TIPO-ELECCION
+
+           MOVE WC-F3-TIPO-ENTIDAD             TO WC-TIPO-ENTIDAD
+           PERFORM MOVER-TIPO-RESULTADO.
+
+      *--------------------*
+       VALIDAR-TIPO-ENTIDAD.
+      *--------------------*
+      *
+           EVALUATE WC-TIPO-ENTIDAD
+            WHEN  '1'
+              IF WC-F2-LIST-BIZ NOT = 'S'
+                 MOVE 'N'          TO WC-SW-FICHERO
+              END-IF
+            WHEN  '2'
+              IF WC-F2-LIST-CIRC NOT = 'S'
+                 MOVE 'N'          TO WC-SW-FICHERO
+              END-IF
+            WHEN  '3'
+              IF WC-F2-LIST-MUNI NOT = 'S'
+                 MOVE 'N'          TO WC-SW-FICHERO
+              END-IF
+            WHEN  '4'
+              IF WC-F2-LIST-MESA NOT = 'S'
+                 MOVE 'N'          TO WC-SW-FICHERO
+              END-IF
+           END-EVALUATE.
+
+      *---------------------*
+       MOVER-TIPO-RESULTADO.
+      *---------------------*
+      *
+           INITIALIZE   WC-SW-VOTOS  WC-SW-PORCEN  WC-SW-ELECTOS
+
+           IF WC-F1-VOTOS = 'S'
+              MOVE 'S'             TO WC-SW-VOTOS
+           END-IF
+
+           IF WC-F1-PORCEN = 'S'
+              MOVE 'S'             TO WC-SW-PORCEN
+           END-IF
+
+           IF WC-F1-ELECTOS = 'S'
+              EVALUATE WC-TIPO-ENTIDAD
+              WHEN '1'
+                 IF WC-TIPO-ELECCION NOT = 'E'
+                    MOVE 'S'       TO WC-SW-ELECTOS
+                 END-IF
+              WHEN '2'
+                 IF WC-TIPO-ELECCION = 'F' OR 'M'
+                    MOVE 'S'       TO WC-SW-ELECTOS
+                 END-IF
+              WHEN '3'
+                 IF WC-TIPO-ELECCION = 'M'
+                    MOVE 'S'       TO WC-SW-ELECTOS
+                 END-IF
+              END-EVALUATE
+           END-IF.
+
+      *-----------------------
+       LEER-RESULTADO-BIZKAIA.
+      *-----------------------
+           MOVE WC-CODELE          TO  E2CODELE
+           MOVE ALL '9'            TO  E2CODCIR
+
+           EXEC SQL SELECT E2PAVOES
+                           INTO :E2PAVOES
+                           FROM SYELRESU
+                           WHERE E2CODELE  = :E2CODELE
+                             AND E2CODCIR  = :E2CODCIR
+           END-EXEC.
+           IF SQLCODE NOT = ZEROS
+              IF SQLCODE = 100
+                 MOVE 'N'          TO  WC-SW-TOT-BIZKAIA
+                 STOP RUN
+              ELSE
+                 PERFORM  ERROR-SQL
+           ELSE
+              MOVE 'S'             TO  WC-SW-TOT-BIZKAIA
+           END-IF.
+
+      *----------------------*
+       INICIAR-CAB-PARTI-BIZ.
+      *----------------------*
+      *
+           MOVE 1 TO IND
+           PERFORM VARYING IND FROM 1 BY 1 UNTIL IND > 99
+                   MOVE ZEROS                  TO  WN-CODPART-CA(IND)
+                   MOVE SPACES                 TO  WC-SIGL-CA (IND)
+           END-PERFORM.
+      *
+      *-------------------------*
+       CABECERA-PARTIDOS-BIZKAIA.
+      *-------------------------*
+      *
+           PERFORM INICIAR-CAB-PARTI-BIZ
+           MOVE E2PAVOES-TEXT(1:E2PAVOES-LEN)  TO RES-PAVOES
+           MOVE 1 TO IND
+           PERFORM VARYING IND FROM 1 BY 1 UNTIL IND > 99 OR
+                                    RES-CODPAR (IND) = ZEROS OR
+                                    RES-CODPAR (IND) = SPACES
+                      MOVE RES-CODPAR (IND)    TO WN-CODPART-CA(IND)
+                                                  WN-WK-CODPAR
+                      PERFORM OBTENER-NOMBRE-PARTI
+           END-PERFORM.
+
+      *--------------------*
+       OBTENER-NOMBRE-PARTI.
+      *--------------------*
+
+           MOVE SPACES                            TO WC-SIGL-CA (IND)
+           INITIALIZE TBELPART
+           MOVE WN-WK-CODPAR                      TO E1CODPAR
+
+           EXEC SQL SELECT *
+                           INTO :TBELPART
+                           FROM SYELPART
+                           WHERE E1CODPAR= :E1CODPAR
+           END-EXEC.
+           EVALUATE SQLCODE
+           WHEN 0
+              STRING E1SIGLAS DELIMITED BY SIZE INTO WC-SIGL-CA (IND)
+           WHEN 100
+              MOVE SPACES                         TO WC-SIGL-CA (IND)
+           WHEN OTHER
+              PERFORM ERROR-SQL
+           END-EVALUATE.
+
+      *---------------------*
+       MOVER-TITULO-CABECERA.
+      *---------------------*
+      *
+           MOVE ZEROS TO IND-PV
+           PERFORM VARYING IND-PV FROM 1 BY 1 UNTIL IND > 99 OR
+                              WN-CODPART-CA (IND-PV) = ZEROS OR
+                              WN-CODPART-CA (IND-PV) = SPACES
+                   MOVE WC-SIGL-CA (IND-PV)   TO WC-L104-SIGLAS(IND-PV)
+           END-PERFORM.
+
+      *------------------------*
+       INICIALIZAR-TABLA-PAVOES.
+      *------------------------*
+      *
+           INITIALIZE IND-PV
+
+           PERFORM VARYING IND-PV  FROM 1 BY 1 UNTIL IND-PV > 99
+               MOVE ZEROS                     TO RES-CODPAR (IND-PV)
+                                                 RES-VOTOS (IND-PV)
+                                                 RES-ESCAN (IND-PV)
+                                                 RES-PORVOT-E (IND-PV)
+                                                 RES-PORVOT-V (IND-PV)
+                                                 RES-PORVOT-C (IND-PV)
+           END-PERFORM.
+      *
+      *----------------------*
+       CALCULAR-ANO-ELECCION.
+      *----------------------*
+           MOVE WC-CODELE(2:2)                TO WC-ANO
+                                                 WC-ANO-ELEC(3:2)
+           IF WN-ANO > 50
+              MOVE '19'                       TO WC-ANO-ELEC(1:2)
+           ELSE
+              MOVE '20'                       TO WC-ANO-ELEC(1:2)
+           END-IF.
+
+      *-----------------*
+       MOVER-CAB-TITULO.
+      *-----------------*
+           INITIALIZE WC-TITULO
+           EVALUATE WC-CODELE (1:1)
+
+           WHEN 'M'
+              STRING 'UDAL HAUTESKUNDEAK - ' WC-ANO-ELEC ' - ELECCIONES
+      -              ' MUNICIPALES'     DELIMITED BY SIZE INTO WC-TITULO
+           WHEN 'F'
+              STRING 'FORU HAUTESKUNDEAK - ' WC-ANO-ELEC ' - ELECCIONES
+      -              ' FORALES'         DELIMITED BY SIZE INTO WC-TITULO
+           WHEN 'V'
+              STRING 'EUSKO LEGEBILTZ.ko HAUTESKUNDEAK - ' WC-ANO-ELEC '
+      -              ' - ELECCIONES PARLM. VASCO'
+                                        DELIMITED BY SIZE INTO WC-TITULO
+           WHEN 'G'
+              STRING 'HAUTESKUNDE OROKORRAK - ' WC-ANO-ELEC ' - ELECCION
+      -              'ES GENERALES'     DELIMITED BY SIZE INTO WC-TITULO
+           WHEN 'E'
+              STRING 'EUROPAR HAUTESKUNDEAK - ' WC-ANO-ELEC ' - ELECCION
+      -              'ES EUROPEAS'      DELIMITED BY SIZE INTO WC-TITULO
+           END-EVALUATE
+
+           MOVE WC-TITULO                            TO WC-L101-TITULO.
+
+      *-------------------*
+       MOVER-CAB-TITULO-2.
+      *-------------------*
+           INITIALIZE WC-TITULO-2
+           EVALUATE WC-TIPO-ENTIDAD
+           WHEN '1'
+              STRING 'Bizkaiko Emaitzak - Resultados de Bizkaia'
+                                      DELIMITED BY SIZE INTO WC-TITULO-2
+           WHEN '2'
+              STRING 'Esparruetako Emaitzak - Resultados de Circunscripc
+      -              'iones'          DELIMITED BY SIZE INTO WC-TITULO-2
+           WHEN '3'
+              STRING 'Udalerrietako Emaitzak - Resultados de Municipios'
+                                      DELIMITED BY SIZE INTO WC-TITULO-2
+           WHEN '4'
+              STRING 'Hauteskunde Mahaietako Emaitzak - Resultados de Me
+      -            'sas Electorales'  DELIMITED BY SIZE INTO WC-TITULO-2
+           END-EVALUATE
+
+           MOVE WC-TITULO-2                        TO WC-L102-TITULO-2.
+
+      *-------------------------*
+       CREAR-ESCRIBIR-PIE-NOTAS.
+      *-------------------------*
+      *
+           INITIALIZE WC-NOTAS-2   WC-NOTAS-3  WC-NOTAS-4
+
+
+           MOVE   'Los porcentajes de votantes y abstención están calcul
+      -           'ados sobre el censo'                      TO WC-NOT-2
+           MOVE   'Los porcentajes de votos válidos y núlos están calcul
+      -           'ados sobre los votos emitidos (votantes)' TO WC-NOT-3
+           MOVE   'Los porcentajes de votos en blanco y a partidos están
+      -           ' calculados sobre los votos válidos'      TO WC-NOT-4
+
+
+           MOVE WC-NOT-2                       TO WC-L101-NOTAS-2
+           MOVE WC-NOT-3                       TO WC-L101-NOTAS-3
+           MOVE WC-NOT-4                       TO WC-L101-NOTAS-4
+           WRITE REG-PC-CAB-2                  FROM WC-CABECERA-SALIDA-3
+           WRITE  REG-PC-CAB-N1                FROM WC-NOTAS-1
+           WRITE  REG-PC-CAB-N2                FROM WC-NOTAS-2
+           WRITE  REG-PC-CAB-N3                FROM WC-NOTAS-3
+           WRITE  REG-PC-CAB-N4                FROM WC-NOTAS-4.
+
+      *----------------*
+       INICIALIZA-VOTOS.
+      *----------------*
+           INITIALIZE IND
+           PERFORM VARYING IND FROM 1 BY 1 UNTIL IND > 99
+                         MOVE  ZEROS           TO WN-VOTOS (IND)
+           END-PERFORM.
+      *-------------------*
+       INICIALIZA-ESCANOS.
+      *-------------------*
+           INITIALIZE IND
+           PERFORM VARYING IND FROM 1 BY 1 UNTIL IND > 99
+                         MOVE  ZEROS           TO WN-ESCAN (IND)
+           END-PERFORM.
+      *-------------------*
+       INICIALIZA-POR-VAL.
+      *-------------------*
+           INITIALIZE IND
+           PERFORM VARYING IND FROM 1 BY 1 UNTIL IND > 99
+                         MOVE  ZEROS           TO WN-PORVOT-V(IND)
+           END-PERFORM.
+      *
+      *----------------------------*
+       RESULT-ELECTORALES-GENERALES.
+      *----------------------------*
+      *
+           MOVE E2CENSEL                       TO WN-CENSO-EL
+           MOVE WN-CENSO-EL                    TO WE-CENSO-EL
+           MOVE E2CENSES                       TO WN-CENSO-ES
+           MOVE E2ABSTEN                       TO WN-ABSTENCION
+           MOVE WN-ABSTENCION                  TO WE-ABSTENCION
+           MOVE E2VOTANT                       TO WN-EMITIDOS
+           MOVE WN-EMITIDOS                    TO WE-EMITIDOS
+           MOVE E2VOTVAL                       TO WN-VALIDOS
+           MOVE  WN-VALIDOS                    TO WE-VALIDOS
+           MOVE E2VOTNUL                       TO WN-NULOS
+           MOVE  WN-NULOS                      TO WE-NULOS
+           MOVE E2VOTBLA                       TO WN-BLANCOS
+           MOVE WN-BLANCOS                     TO WE-BLANCOS.
+
+      *----------------------------------------------------------------*
+      *  T R A T A M I E N T O S    D E     E S C R I T U R A          *
+      *----------------------------------------------------------------*
+      *--------------*
+       ESCRIBIR-VOTOS.
+      *--------------*
+           INITIALIZE IND-PV
+           PERFORM VARYING IND-PV FROM 1 BY 1 UNTIL IND-PV > 99 OR
+                                    WN-CODPAR (IND-PV) = ZEROS OR
+                                    WN-CODPAR (IND-PV) = SPACES
+                 MOVE SPACES                   TO WC-L105-VOTOS(IND-PV)
+                 IF WN-VOTOS (IND-PV) > 0
+                      MOVE WN-VOTOS(IND-PV)    TO WE-VOTOS
+                      MOVE WE-VOTOS            TO WC-L105-VOTOS(IND-PV)
+                 END-IF
+           END-PERFORM.
+
+      *---------------------*
+       ESCRIBIR-PORCENTAJES.
+      *---------------------*
+           PERFORM VARYING IND-PV FROM 1 BY 1 UNTIL IND-PV > 99 OR
+                                    WN-CODPAR (IND-PV) = ZEROS OR
+                                    WN-CODPAR (IND-PV) = SPACES
+                  MOVE SPACES               TO WC-L106-POR-PART(IND-PV)
+                  IF WN-PORVOT-V(IND-PV) > 0
+                      MOVE WN-PORVOT-V(IND-PV) TO WE-POR-VALIDO
+                      MOVE WE-POR-VALIDO    TO WC-L106-POR-PART(IND-PV)
+                  END-IF
+           END-PERFORM.
+      *-----------------*
+       ESCRIBIR-ELECTOS.
+      *-----------------*
+           PERFORM VARYING IND-PV FROM 1 BY 1 UNTIL IND-PV > 99 OR
+                                    WN-CODPAR (IND-PV) = ZEROS OR
+                                    WN-CODPAR (IND-PV) = SPACES
+                  MOVE SPACES                TO WC-L107-POR-PART(IND-PV)
+                  IF WN-ESCAN(IND-PV) > 0
+                      MOVE WN-ESCAN(IND-PV)  TO WE-CONCEJALES
+                      MOVE WE-CONCEJALES     TO WC-L107-POR-PART(IND-PV)
+                  END-IF
+           END-PERFORM.
+      *----------------------------------------------------------------*
+      *                                                                *
+      *----------------------------------------------------------------*
+      *--------------------*
+       CALCULAR-PORCENTAJES.
+      *--------------------*
+      *
+           IF WN-CENSO-EL      NOT = ZEROS
+              IF WN-CENSO-ES       > WN-CENSO-EL
+                 MOVE W-CIEN                 TO WN-PORC
+              ELSE
+                 COMPUTE WN-PORC ROUNDED = WN-CENSO-ES      * 100 /
+                                           WN-CENSO-EL
+              END-IF
+           ELSE
+              MOVE ZEROS                     TO WN-PORC
+           END-IF
+      *
+           IF WN-PORC = ZEROS
+              MOVE ZEROS                     TO WN-POR-ESCRUTA
+           ELSE
+              MOVE WN-PORC                   TO WN-POR-ESCRUTA
+              MOVE WN-POR-ESCRUTA            TO WE-POR-ESCRUTA
+           END-IF
+      *
+           MOVE ZEROS                        TO WN-PORC
+           IF WN-CENSO-ES      NOT = ZEROS
+              IF WN-EMITIDOS    > WN-CENSO-ES
+                 MOVE W-CIEN                 TO WN-PORC
+              ELSE
+                 COMPUTE WN-PORC ROUNDED = WN-EMITIDOS   * 100 /
+                                           WN-CENSO-ES
+              END-IF
+           ELSE
+              MOVE ZEROS                     TO WN-PORC
+           END-IF
+      *
+           MOVE WN-PORC                      TO WN-PORCEN
+           IF WN-PORC = ZEROS
+              MOVE ZEROS                     TO WN-POR-EMITIDO
+           ELSE
+              MOVE WN-PORC                   TO WN-POR-EMITIDO
+              MOVE WN-POR-EMITIDO            TO WE-POR-EMITIDO
+           END-IF
+      *
+           COMPUTE WN-PORCEN = W-CIEN - WN-PORCEN
+      *
+           IF WN-PORCEN = ZEROS
+              MOVE ZEROS                     TO WN-POR-ABSTENCION
+           ELSE
+              MOVE WN-PORCEN                 TO WN-POR-ABSTENCION
+              MOVE WN-POR-ABSTENCION         TO WE-POR-ABSTENCION
+           END-IF
+      *
+           IF WN-EMITIDOS   NOT = ZEROS
+              COMPUTE WN-PORC ROUNDED = WN-NULOS   * 100 /
+                                        WN-EMITIDOS
+           ELSE
+              MOVE ZEROS                     TO WN-PORC
+           END-IF
+      *
+           IF WN-PORC = ZEROS
+              MOVE ZEROS                     TO WN-POR-NULOS
+           ELSE
+              MOVE WN-PORC                   TO WN-POR-NULOS
+              MOVE WN-POR-NULOS              TO WE-POR-NULOS
+           END-IF
+      *
+           MOVE WN-PORC                  TO WN-PORCEN WN-POR-NULOS
+           IF WN-EMITIDOS   NOT = ZEROS
+              COMPUTE WN-PORC ROUNDED = WN-BLANCOS     * 100 /
+                                        WN-EMITIDOS
+           ELSE
+              MOVE ZEROS                     TO WN-PORC
+           END-IF
+      *
+           IF WN-PORC = ZEROS
+              MOVE ZEROS                     TO WN-POR-BLANCO
+           ELSE
+              MOVE WN-PORC                   TO WN-POR-BLANCO
+              MOVE WN-POR-BLANCO             TO WE-POR-BLANCO
+           END-IF
+      *
+           ADD WN-PORC                       TO WN-PORCEN
+
+           IF WN-EMITIDOS       NOT = ZEROS
+              COMPUTE WN-PORC = W-CIEN - WN-POR-NULOS
+           ELSE
+              MOVE ZEROS                     TO WN-PORC
+           END-IF
+
+           IF WN-PORC = ZEROS
+              MOVE ZEROS                     TO WN-POR-VALIDO
+           ELSE
+              MOVE WN-PORC                   TO WN-POR-VALIDO
+              MOVE WN-POR-VALIDO             TO WE-POR-VALIDO
+           END-IF.
+      *
+      *----------------------------------------------------------------*
+      *   Rutinas de DB2                                               *
+      *----------------------------------------------------------------*
+      *--------------*
+       LEER-SIGUIENTE.
+      *--------------*
+      *
+      * - Leemos el siguiente registro según el cursor que estamos uti-
+      *   lizando.
+      *
+           EVALUATE WC-TIPO-ENTIDAD
+              WHEN '1'
+                   PERFORM FETCH-CURC1
+              WHEN '2'
+                   PERFORM FETCH-CURC2
+              WHEN '3'
+                   PERFORM FETCH-CURC3
+              WHEN '4'
+                   PERFORM FETCH-CURC4
+           END-EVALUATE.
+
+      *----------*
+       OPEN-CURC1.
+      *------------*
+      *
+      * - Abrir CURC1.
+      *
+           MOVE '** OPEN CURC1 **' TO WC-DB2-MSG
+           EXEC SQL OPEN CURC1 END-EXEC.
+
+      *-------------*
+       FETCH-CURC1.
+      *-------------*
+      *
+      * - Leer CURC1.
+      *
+           INITIALIZE    TBELRESU
+           MOVE ZEROS TO WN-CODCIR
+                         WN-CODMUN
+
+           EXEC SQL FETCH CURC1
+                     INTO :TBELRESU
+           END-EXEC.
+
+           EVALUATE SQLCODE
+             WHEN 0
+                 MOVE 'N'                  TO WC-FIN-CURSOR
+             WHEN 100
+                 MOVE 'S'                  TO WC-FIN-CURSOR
+             WHEN OTHER
+                PERFORM ERROR-SQL
+                MOVE '** FETCH CURC1 **'   TO WC-DB2-MSG
+           END-EVALUATE.
+
+      *-------------*
+       CLOSE-CURC1.
+      *-------------*
+      *
+      * - Cerrar CURC1.
+      *
+           MOVE '** CLOSE CURC1 **'        TO WC-DB2-MSG
+           EXEC SQL CLOSE CURC1 END-EXEC.
+
+      *----------*
+       OPEN-CURC2.
+      *------------*
+      *
+      * - Abrir CURC2.
+      *
+           MOVE '** OPEN CURC2 **'         TO WC-DB2-MSG
+           EXEC SQL OPEN CURC2 END-EXEC.
+
+      *-------------*
+       FETCH-CURC2.
+      *-------------*
+      *
+      * - Leer CURC2.
+      *
+           INITIALIZE TBELRESU TBELPERS
+           EXEC SQL FETCH CURC2
+                INTO :TBELRESU, :TBELPERS
+           END-EXEC.
+      *
+           EVALUATE SQLCODE
+             WHEN 0
+                 MOVE E3NOMBRE             TO WC-AMBITO
+                 MOVE 'N'                  TO WC-FIN-CURSOR
+             WHEN 100
+                 MOVE SPACES               TO WC-AMBITO
+                 MOVE 'S'                  TO WC-FIN-CURSOR
+             WHEN OTHER
+                MOVE '** FETCH CURC2 **'   TO WC-DB2-MSG
+                PERFORM ERROR-SQL
+           END-EVALUATE.
+
+      *-------------*
+       CLOSE-CURC2.
+      *-------------*
+      *
+      * - Cerrar CURC2.
+      *
+           MOVE '** CLOSE CURC2 **'        TO WC-DB2-MSG
+           EXEC SQL CLOSE CURC2 END-EXEC.
+
+      *----------*
+       OPEN-CURC3.
+      *------------*
+      *
+      * - Abrir CURC3.
+      *
+           MOVE '** OPEN CURC3 **'         TO WC-DB2-MSG
+           EXEC SQL OPEN CURC3 END-EXEC.
+
+      *-------------*
+       FETCH-CURC3.
+      *-------------*
+      *
+      * - Leer CURC3.
+      *
+           INITIALIZE TBELRESU   TBUTMUNI
+           MOVE ZEROS TO WN-CODPART
+                         WN-CODCIR
+                         WN-CODMUN
+           EXEC SQL FETCH CURC3
+                   INTO :TBELRESU, :TBUTMUNI
+           END-EXEC.
+      *
+           EVALUATE SQLCODE
+             WHEN 0
+                 MOVE MUDESCAM             TO WC-AMBITO
+                 MOVE 'N'                  TO WC-FIN-CURSOR
+             WHEN 100
+                 MOVE SPACES               TO WC-AMBITO
+                 MOVE 'S'                  TO WC-FIN-CURSOR
+             WHEN OTHER
+                MOVE '** FETCH CURC3 **'   TO WC-DB2-MSG
+                PERFORM ERROR-SQL
+           END-EVALUATE.
+
+      *-------------*
+       CLOSE-CURC3.
+      *-------------*
+      *
+      * - Cerrar CURC3.
+      *
+           MOVE '** CLOSE CURC3 **'        TO WC-DB2-MSG
+           EXEC SQL CLOSE CURC3 END-EXEC.
+
+      *------------*
+       OPEN-CURC4.
+      *------------*
+      *
+      * - Abrir CURC4.
+      *
+           MOVE '** OPEN CURC4 **'         TO WC-DB2-MSG
+           EXEC SQL OPEN CURC4 END-EXEC.
+
+      *-----------*
+       FETCH-CURC4.
+      *-----------*
+      *
+      * - Leer CURC4.
+      *
+           INITIALIZE WC-AMBITO TBELRESU TBUTMUNI WN-CODDIS
+                      WC-CODDIS WC-CODSEC WC-CODMES
+                      WN-CODSEC WN-CODMES WC-AMBITO-MESA
+      *
+           EXEC SQL FETCH CURC4
+                     INTO :TBELRESU, :TBUTMUNI
+           END-EXEC.
+      *
+           EVALUATE SQLCODE
+             WHEN 0
+                  MOVE E2CODDIS             TO WN-CODDIS
+                  MOVE E2CODSEC             TO WN-CODSEC
+                  MOVE E2CODMES             TO WN-CODMES
+                  STRING MUDESCRE '     ' WN-CODDIS '     ' WN-CODSEC '
+      -                  '    ' WN-CODMES DELIMITED BY SIZE INTO
+                                                         WC-AMBITO-MESA
+                  MOVE 'N'                  TO WC-FIN-CURSOR
+             WHEN 100
+                 MOVE SPACES                TO WC-AMBITO-MESA
+                 MOVE 'S'                   TO WC-FIN-CURSOR
+             WHEN OTHER
+                MOVE '** FETCH CURC4 **'    TO WC-DB2-MSG
+                PERFORM ERROR-SQL
+           END-EVALUATE.
+
+      *-----------*
+       CLOSE-CURC4.
+      *-----------*
+      *
+      * - Cerrar CURC4
+      *
+           MOVE '** CLOSE CURC4 **'         TO WC-DB2-MSG
+           EXEC SQL CLOSE CURC4 END-EXEC.
+
+      *----------------------------------------------------------------*
+      *   Rutinas de error                                             *
+      *----------------------------------------------------------------*
+
+      *---------*
+       ERROR-SQL.
+      *---------*
+      *
+      * - Error de DB2, mensaje y fin.
+      *
+           MOVE SQLCODE                     TO WE-DB2-CODE
+           MOVE SQLERRMC                    TO WC-DB2-ERR
+           DISPLAY '**************************************************'
+           DISPLAY '*   E R R O R   D B 2                            *'
+           DISPLAY '**************************************************'
+           DISPLAY '  ELHM011P, ' WC-DB2-ERROR
+           DISPLAY '**************************************************'
+           MOVE 4094                        TO WP-CODIGO-ABEND
+           CALL WC-FINABEND USING WP-CODIGO-ABEND
+           GOBACK.
+
+      *--------------*
+       ERROR-SR02004R.
+      *--------------*
+           DISPLAY '*=============================================*'
+           DISPLAY '*                                             *'
+           DISPLAY '*   PROGRAMA : ELHM011P                       *'
+           DISPLAY '*                                             *'
+           DISPLAY '*   Error en CALL al procedimiento  SR02004R  *'
+           DISPLAY '*   ----------------------------------------  *'
+           DISPLAY '*                                             *'
+           DISPLAY '*=============================================*'
+           DISPLAY '* SR02004RC-FECHA-BASE ' SR02004RC-FECHA-BASE
+           DISPLAY '* SR02004RN-RETORNO    ' SR02004RN-RETORNO
+      *
+           MOVE 3002 TO RETURN-CODE.
+           GOBACK.
+
+HPTRAN*----------------*
+HPTRAN HP-FIN-DE-FUENTE.
+HPTRAN     GOBACK.
+HPTRAN*----------------*
+HPTRAN MOVE-ZERO-TO-PIC9.
+HPTRAN*----------------*
+HPTRAN     MOVE ZERO TO SR02004RN-DIASEMANA.
+HPTRAN MOVE-ZERO-TO-PIC9-END.
+HPTRAN     EXIT.
+
+      ******************************************************************
+      *   Fin ELHM011P                                                 *
+      ******************************************************************
